@@ -14,7 +14,7 @@ window.onload = function() {
   let game = new Phaser.Game(960, 600, Phaser.AUTO, 'game');
   game.state.add('play', PlayState);
   game.state.start('play', true, false, {
-    level: 2 // ändern um bei lvl.. zu starten
+    level: 1 // ändern um bei lvl.. zu starten
   });
 };
 
@@ -38,7 +38,7 @@ PlayState.init = function(data) {
   this.coinPickupCount = 0;
   this.hasKey = false;
   this.level = data.level;
-  this.levelAll = 4;
+  this.levelAll = 5;
 };
 
 
@@ -51,16 +51,15 @@ PlayState.preload = function() {
   this.game.load.json('level:1', 'data/level01.json');
   this.game.load.json('level:2', 'data/level02.json');
   this.game.load.json('level:3', 'data/level03.json');
+  this.game.load.json('level:4', 'data/level04.json');
   //image
   this.game.load.image('red_Heart', 'images/red Heart.png');
   this.game.load.image('black_Heart', 'images/black Heart.png');
   this.game.load.image('key', 'images/key.png');
-  this.game.load.image('hero', 'images/hero_stopped.png');
   this.game.load.image('font:numbers', 'images/numbers.png');
   this.game.load.image('icon:coin', 'images/coin_icon.png');
-  this.game.load.image('hero', 'images/hero_stopped.png');
   this.game.load.image('background', 'images/background.png');
-  this.game.load.image('background', 'images/Hintergrund2.png');
+  this.game.load.image('background2', 'images/Hintergrund2.png');
   this.game.load.image('ground', 'images/ground.png');
   this.game.load.image('grass:8x1', 'images/grass_8x1.png');
   this.game.load.image('grass:6x1', 'images/grass_6x1.png');
