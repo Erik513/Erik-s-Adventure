@@ -4,8 +4,15 @@ PlayState = {};
 
 const Spider1_SPEED = 150;
 const Spider2_SPEED = 275;
-const Spider3_SPEED = 400;
+const Spider3_SPEED = 350;
 const Spider4_SPEED = 50;
+const JUMP_SPEED = 550;
+const JUMP_SPEED2 = 400;
+const JUMP_SPEED_TRAMP = 700;
+const NUMBERS_STR = '0123456789X ';
+const SPEED = 200;
+const GRAVITY = 1200;
+const Bounce_speed = 200;
 
 //onload:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -14,7 +21,7 @@ window.onload = function() {
   let game = new Phaser.Game(960, 600, Phaser.AUTO, 'game');
   game.state.add('play', PlayState);
   game.state.start('play', true, false, {
-    level: 1 // ändern um bei lvl.. zu starten
+    level: 2 // ändern um bei lvl.. zu starten
   });
 };
 
@@ -30,7 +37,7 @@ PlayState.init = function(data) {
     up: Phaser.KeyCode.UP
   });
   this.keys.up.onDown.add(function() {
-    let didJump = this.hero.jump();
+    let didJump = this.hero.jump(true);
     if (didJump) {
       this.sfx.jump.play();
     }
@@ -69,6 +76,7 @@ PlayState.preload = function() {
   this.game.load.image('invisible-wall', 'images/invisible_wall.png');
   this.game.load.image('trampolin:1x1', 'images/trampolin_1x1.png');
   //spritesheet
+  this.game.load.spritesheet('decoration', 'images/decor.png', 42, 42);
   this.game.load.spritesheet('door', 'images/door.png', 42, 66);
   this.game.load.spritesheet('hero', 'images/hero.png', 36, 42);
   this.game.load.spritesheet('coin', 'images/coin_animated.png', 22, 22);
@@ -92,7 +100,6 @@ PlayState.preload = function() {
 PlayState._createHud = function() {
   this.keyIcon = this.game.make.image(0, 19, 'icon:key');
   this.keyIcon.anchor.set(0, 0.5);
-  const NUMBERS_STR = '0123456789X ';
   this.coinFont = this.game.add.retroFont('font:numbers', 20, 26,
     NUMBERS_STR, 6);
   this.levelAnzeige = this.game.add.retroFont('font:numbers', 20, 26,
@@ -183,12 +190,15 @@ PlayState._loadLevel = function(data) {
     spider3: data.spider3,
     spider4: data.spider4
   });
+  data.decoration.forEach(function(deco) {
+    this.bgDecoration.add(
+      this.game.add.image(deco.x, deco.y, 'decoration', deco.frame));
+  }, this);
   data.coins.forEach(this._spawnCoin, this);
   data.trampolin.forEach(this._spawnTrampolin, this);
   this.hasAllCoins = data.coins.length * 10;
   this._spawnDoor(data.door.x, data.door.y);
   this._spawnKey(data.key.x, data.key.y);
-  const GRAVITY = 1200;
   this.game.physics.arcade.gravity.y = GRAVITY;
 };
 
@@ -282,7 +292,7 @@ PlayState._onHeroVsCoin = function(hero, coin) {
 
 PlayState._onHeroVsTrampolin = function(hero, trampolin) {
   hero.canAnimate = false;
-  hero.jump();
+  hero.jump(false);
 };
 
 //OnHeroVsKey
@@ -295,9 +305,24 @@ PlayState._onHeroVsKey = function(hero, key) {
 
 //OnHeroVsDoor
 PlayState._onHeroVsDoor = function(hero, door) {
+
   if (this.coinPickupCount >= this.hasAllCoins && this.hasKey) {
     hero.canAnimate = false;
+    door.frame = 1;
     this.sfx.door.play();
+    hero.freeze();
+    this.game.add.tween(hero)
+      .to({
+        x: this.door.x,
+        alpha: 0
+      }, 500, null, true)
+      .onComplete.addOnce(this._goToNextLevel, this);
+  }
+};
+
+PlayState._goToNextLevel = function() {
+  this.camera.fade('#000000');
+  this.camera.onFadeComplete.addOnce(function() {
     var nextlevel = this.level + 1;
     if (nextlevel >= this.levelAll) {
       nextlevel = 0;
@@ -305,10 +330,7 @@ PlayState._onHeroVsDoor = function(hero, door) {
     this.game.state.restart(true, false, {
       level: nextlevel
     });
-
-  }
-
-
+  }, this);
 };
 
 //spawn irgendwas::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -416,78 +438,80 @@ function Hero(game, x, y, touchDownSound) {
   this.animations.add('invinsible', [0, 6, 7, 0], 30, true);
 }
 
-function createHero() {
-  Hero.prototype = Object.create(Phaser.Sprite.prototype);
-  Hero.prototype.constructor = Hero;
-  Hero.prototype.leben = 3;
+Hero.prototype = Object.create(Phaser.Sprite.prototype);
+Hero.prototype.constructor = Hero;
+Hero.prototype.leben = 3;
 
-  Hero.prototype.move = function(direction) {
-    this.canAnimate = true;
-    const SPEED = 200;
-    this.body.velocity.x = direction * SPEED;
-    if (this.body.velocity.x < 0) {
-      this.scale.x = -1;
-    } else if (this.body.velocity.x > 0) {
-      this.scale.x = 1;
-    }
-  };
+Hero.prototype.move = function(direction) {
+  this.canAnimate = true;
+  this.body.velocity.x = direction * SPEED;
+  if (this.body.velocity.x < 0) {
+    this.scale.x = -1;
+  } else if (this.body.velocity.x > 0) {
+    this.scale.x = 1;
+  }
+};
 
-  Hero.prototype._getAnimationName = function() {
-    let name = 'stop';
-    var d = new Date();
-    var n = d.getTime();
-    if (n < lastLifeLoss + 2000) {
-      name = 'invinsible';
-    } else if (this.body.velocity.y < 0) {
-      name = 'jump';
-    } else if (this.body.velocity.y >= 0 && !this.body.touching.down) {
-      name = 'fall';
-    } else if (this.body.velocity.x !== 0 && this.body.touching.down) {
-      name = 'run';
-    }
+Hero.prototype._getAnimationName = function() {
+  let name = 'stop';
+  var d = new Date();
+  var n = d.getTime();
+  if (n < lastLifeLoss + 2000) {
+    name = 'invinsible';
+  } else if (this.body.velocity.y < 0) {
+    name = 'jump';
+  } else if (this.body.velocity.y >= 0 && !this.body.touching.down) {
+    name = 'fall';
+  } else if (this.body.velocity.x !== 0 && this.body.touching.down) {
+    name = 'run';
+  }
 
-    return name;
-  };
+  return name;
+};
 
-  Hero.prototype.jump = function() {
-    const JUMP_SPEED = 550;
-    const JUMP_SPEED2 = 400;
-    let canJump = this.body.touching.down;
-    if (canJump && this.kannDoppelSprung) {
-      this.kannDoppelSprung = false;
-    }
+Hero.prototype.jump = function(Boden) {
 
-    if (canJump) {
-      this.body.velocity.y = -JUMP_SPEED;
-      this.kannDoppelSprung = true;
-    } else if (this.kannDoppelSprung) {
-      this.body.velocity.y = -JUMP_SPEED2;
-      this.kannDoppelSprung = false;
-    }
+  let canJump = this.body.touching.down;
+  if (canJump && this.kannDoppelSprung) {
+    this.kannDoppelSprung = false;
+  }
 
-    return canJump;
-  };
-
-  Hero.prototype.bounce = function() {
+  if (!Boden) {
+    this.body.velocity.y = -JUMP_SPEED_TRAMP;
+  } else if (canJump) {
+    this.body.velocity.y = -JUMP_SPEED;
     this.kannDoppelSprung = true;
-    const Bounce_speed = 200;
-    this.body.velocity.y = -Bounce_speed;
-  };
+  } else if (this.kannDoppelSprung) {
+    this.body.velocity.y = -JUMP_SPEED2;
+    this.kannDoppelSprung = false;
+  }
 
-  Hero.prototype.update = function() {
-    if (this.body.touching.down && this.kannDoppelSprung) {
-      this.touchDownSound.play();
-      this.kannDoppelSprung = false;
+  return canJump;
+};
+
+Hero.prototype.bounce = function() {
+  this.kannDoppelSprung = true;
+  this.body.velocity.y = -Bounce_speed;
+};
+
+Hero.prototype.update = function() {
+  if (this.body.touching.down && this.kannDoppelSprung) {
+    this.touchDownSound.play();
+    this.kannDoppelSprung = false;
+  }
+  let animationName = this._getAnimationName();
+  if (this.animations.name !== animationName) {
+    if (this.canAnimate) {
+      this.animations.play(animationName);
     }
-    let animationName = this._getAnimationName();
-    if (this.animations.name !== animationName) {
-      if (this.canAnimate) {
-        this.animations.play(animationName);
-      }
-    }
-  };
-}
-createHero();
+  }
+};
+
+Hero.prototype.freeze = function() {
+  this.body.enable = false;
+  this.isFrozen = true;
+};
+
 
 //Spider1
 function Spider(game, x, y, bild, geschwindigkeit) {
