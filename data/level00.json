@@ -22,6 +22,8 @@
     "spider2": [],
     "spider3": [],
     "spider4": [],
+    "spider5": [{"x": 700, "y": 360}],
+    "spider6": [{"x": 700, "y": 360}],
     "door": {"x": 230, "y": 545},
     "key": {"x": 525, "y": 360},
     "trampolin": []

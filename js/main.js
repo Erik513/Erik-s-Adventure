@@ -2,17 +2,19 @@
 
 PlayState = {};
 
-const Spider1_SPEED = 150;
-const Spider2_SPEED = 275;
-const Spider3_SPEED = 350;
-const Spider4_SPEED = 50;
-const JUMP_SPEED = 550;
-const JUMP_SPEED2 = 400;
-const JUMP_SPEED_TRAMP = 700;
+const Spider1_SPEED = 150; //Standartspinne
+const Spider2_SPEED = 275; //schnell,pink
+const Spider3_SPEED = 350; //sehr schnell,rot-schwarz
+const Spider4_SPEED = 50; //Langsam,Blau
+const Spider5_SPEED = 80; //Riesig
+const Spider6_SPEED = 600; //winzig
+const JUMP_SPEED = 550; //Normaler Sprung
+const JUMP_SPEED2 = 400; //Doppelsprung
+const JUMP_SPEED_TRAMP = 700; //Abprall des Trampolins
 const NUMBERS_STR = '0123456789X ';
-const SPEED = 200;
-const GRAVITY = 1200;
-const Bounce_speed = 200;
+const SPEED = 300; //Geschwindigkeit des Hero's
+const GRAVITY = 1200; //Erdanziehung
+const Bounce_speed = 200; //Sprung nach Tötung der Spinne
 
 //onload:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -21,7 +23,7 @@ window.onload = function() {
   let game = new Phaser.Game(960, 600, Phaser.AUTO, 'game');
   game.state.add('play', PlayState);
   game.state.start('play', true, false, {
-    level: 2 // ändern um bei lvl.. zu starten
+    level: 0 // ändern um bei lvl.. zu starten
   });
 };
 
@@ -45,7 +47,7 @@ PlayState.init = function(data) {
   this.coinPickupCount = 0;
   this.hasKey = false;
   this.level = data.level;
-  this.levelAll = 5;
+  this.levelAll = 6; //Alle lvl müssen angegeben werden
 };
 
 
@@ -59,11 +61,15 @@ PlayState.preload = function() {
   this.game.load.json('level:2', 'data/level02.json');
   this.game.load.json('level:3', 'data/level03.json');
   this.game.load.json('level:4', 'data/level04.json');
+  this.game.load.json('level:5', 'data/level05.json');
   //image
   this.game.load.image('red_Heart', 'images/red Heart.png');
   this.game.load.image('black_Heart', 'images/black Heart.png');
   this.game.load.image('key', 'images/key.png');
+  this.game.load.image('Leiter', 'images/Leiter.png');
+  this.game.load.image('LeiterOben', 'images/LeiterOben.png');
   this.game.load.image('font:numbers', 'images/numbers.png');
+  this.game.load.image('font:LEVEL', 'images/LEVEL.png');
   this.game.load.image('icon:coin', 'images/coin_icon.png');
   this.game.load.image('background', 'images/background.png');
   this.game.load.image('background2', 'images/Hintergrund2.png');
@@ -84,6 +90,8 @@ PlayState.preload = function() {
   this.game.load.spritesheet('spider2', 'images/spider2.png', 42, 32);
   this.game.load.spritesheet('spider3', 'images/spider3.png', 42, 32);
   this.game.load.spritesheet('spider4', 'images/spider4.png', 42, 32);
+  this.game.load.spritesheet('spider5', 'images/spider5.png', 168, 128);
+  this.game.load.spritesheet('spider6', 'images/spider6.png', 21, 16);
   this.game.load.spritesheet('icon:key', 'images/key_icon.png', 34, 30);
   //audio
   this.game.load.audio('sfx:coin', 'audio/coin.wav');
@@ -102,19 +110,24 @@ PlayState._createHud = function() {
   this.keyIcon.anchor.set(0, 0.5);
   this.coinFont = this.game.add.retroFont('font:numbers', 20, 26,
     NUMBERS_STR, 6);
-  this.levelAnzeige = this.game.add.retroFont('font:numbers', 20, 26,
+  this.levelAnzeigeFont = this.game.add.retroFont('font:numbers', 20, 26,
     NUMBERS_STR, 6);
+  this.levelAnzeigeImg = this.game.make.image(800, 0, 'font:LEVEL');
   let coinIcon = this.game.make.image(this.keyIcon.width + 7, 0, 'icon:coin');
+  let levelNumberImg = this.game.make.image(
+    this.levelAnzeigeImg.x + this.levelAnzeigeImg.width,
+    this.levelAnzeigeImg.height / 2, this.levelAnzeigeFont);
   let coinScoreImg = this.game.make.image(coinIcon.x + coinIcon.width,
     coinIcon.height / 2, this.coinFont);
-  let levelAnzeigeImg = this.game.make.image(870, coinIcon.height / 6, this.levelAnzeige);
   coinScoreImg.anchor.set(0, 0.5);
+  levelNumberImg.anchor.set(0, 0.5);
   this.hud = this.game.add.group();
   this.hud.add(coinIcon);
   this.hud.position.set(10, 10);
   this.hud.add(coinScoreImg);
+  this.hud.add(levelNumberImg);
   this.hud.add(this.keyIcon);
-  this.hud.add(levelAnzeigeImg);
+  this.hud.add(this.levelAnzeigeImg);
   this.black_HeartIcon0 = this.game.make.image(0, 60, 'black_Heart');
   this.black_HeartIcon1 = this.game.make.image(31, 60, 'black_Heart');
   this.black_HeartIcon2 = this.game.make.image(62, 60, 'black_Heart');
@@ -153,6 +166,7 @@ PlayState.create = function() {
   this.game.add.image(0, 0, 'background');
   this._loadLevel(this.game.cache.getJSON(`level:${this.level}`));
   this._createHud();
+  this.levelAnzeigeFont.text = `${this.level+1}`;
 };
 
 
@@ -164,7 +178,6 @@ PlayState.update = function() {
   this._handleInput();
   this.coinFont.text = `x${this.coinPickupCount}`;
   this.keyIcon.frame = this.hasKey ? 1 : 0;
-  this.levelAnzeige.text = `${this.level}`;
 };
 
 
@@ -180,6 +193,8 @@ PlayState._loadLevel = function(data) {
   this.spider2 = this.game.add.group();
   this.spider3 = this.game.add.group();
   this.spider4 = this.game.add.group();
+  this.spider5 = this.game.add.group();
+  this.spider6 = this.game.add.group();
   this.enemyWalls = this.game.add.group();
   this.enemyWalls.visible = false;
   data.platforms.forEach(this._spawnPlatform, this);
@@ -188,7 +203,10 @@ PlayState._loadLevel = function(data) {
     spider1: data.spider1,
     spider2: data.spider2,
     spider3: data.spider3,
-    spider4: data.spider4
+    spider4: data.spider4,
+    spider5: data.spider5,
+    spider6: data.spider6
+
   });
   data.decoration.forEach(function(deco) {
     this.bgDecoration.add(
@@ -231,6 +249,10 @@ PlayState._handleCollisions = function() {
   this.game.physics.arcade.collide(this.spider3, this.enemyWalls);
   this.game.physics.arcade.collide(this.spider4, this.platforms);
   this.game.physics.arcade.collide(this.spider4, this.enemyWalls);
+  this.game.physics.arcade.collide(this.spider5, this.platforms);
+  this.game.physics.arcade.collide(this.spider5, this.enemyWalls);
+  this.game.physics.arcade.collide(this.spider6, this.platforms);
+  this.game.physics.arcade.collide(this.spider6, this.enemyWalls);
   this.game.physics.arcade.collide(this.hero, this.platforms);
   this.game.physics.arcade.overlap(this.hero, this.trampolin, this._onHeroVsTrampolin,
     null, this);
@@ -243,6 +265,10 @@ PlayState._handleCollisions = function() {
   this.game.physics.arcade.overlap(this.hero, this.spider3, this._onHeroVsSpider,
     null, this);
   this.game.physics.arcade.overlap(this.hero, this.spider4, this._onHeroVsSpider,
+    null, this);
+  this.game.physics.arcade.overlap(this.hero, this.spider5, this._onHeroVsSpider,
+    null, this);
+  this.game.physics.arcade.overlap(this.hero, this.spider6, this._onHeroVsSpider,
     null, this);
   this.game.physics.arcade.overlap(this.hero, this.key, this._onHeroVsKey,
     null, this);
@@ -354,6 +380,14 @@ PlayState._spawnCharacters = function(data) {
     let sprite = new Spider(this.game, spider4.x, spider4.y, 'spider4', Spider4_SPEED);
     this.spider4.add(sprite);
   }, this);
+  data.spider5.forEach(function(spider5) {
+    let sprite = new Spider(this.game, spider5.x, spider5.y, 'spider5', Spider5_SPEED);
+    this.spider5.add(sprite);
+  }, this);
+  data.spider6.forEach(function(spider6) {
+    let sprite = new Spider(this.game, spider6.x, spider6.y, 'spider6', Spider6_SPEED);
+    this.spider6.add(sprite);
+  }, this);
   this.game.add.existing(this.hero);
 };
 
@@ -435,7 +469,7 @@ function Hero(game, x, y, touchDownSound) {
   this.animations.add('run', [1, 2], 8, true);
   this.animations.add('jump', [3]);
   this.animations.add('fall', [4]);
-  this.animations.add('invinsible', [0, 6, 7, 0], 30, true);
+  this.animations.add('invinsible', [0, 6, 0, 7, ], 30, true);
 }
 
 Hero.prototype = Object.create(Phaser.Sprite.prototype);
@@ -513,7 +547,7 @@ Hero.prototype.freeze = function() {
 };
 
 
-//Spider1
+//Spider
 function Spider(game, x, y, bild, geschwindigkeit) {
   Phaser.Sprite.call(this, game, x, y, bild);
   this.geschwindigkeit = geschwindigkeit;
