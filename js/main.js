@@ -32,7 +32,6 @@ window.onload = function() {
 
 PlayState.init = function(data) {
   this.game.renderer.renderSession.roundPixels = true;
-
   this.keys = this.game.input.keyboard.addKeys({
     left: Phaser.KeyCode.LEFT,
     right: Phaser.KeyCode.RIGHT,
@@ -47,7 +46,7 @@ PlayState.init = function(data) {
   this.coinPickupCount = 0;
   this.hasKey = false;
   this.level = data.level;
-  this.levelAll = 6; //Alle lvl müssen angegeben werden
+  this.levelAll = 7; //Alle lvl müssen angegeben werden
 };
 
 
@@ -56,12 +55,13 @@ PlayState.init = function(data) {
 
 PlayState.preload = function() {
   //json
-  this.game.load.json('level:0', 'data/level00.json');
-  this.game.load.json('level:1', 'data/level01.json');
-  this.game.load.json('level:2', 'data/level02.json');
-  this.game.load.json('level:3', 'data/level03.json');
-  this.game.load.json('level:4', 'data/level04.json');
-  this.game.load.json('level:5', 'data/level05.json');
+  this.game.load.json('level:0', 'data/testlvl.json');
+  this.game.load.json('level:1', 'data/level00.json');
+  this.game.load.json('level:2', 'data/level01.json');
+  this.game.load.json('level:3', 'data/level02.json');
+  this.game.load.json('level:4', 'data/level03.json');
+  this.game.load.json('level:5', 'data/level04.json');
+  this.game.load.json('level:6', 'data/level05.json');
   //image
   this.game.load.image('red_Heart', 'images/red Heart.png');
   this.game.load.image('black_Heart', 'images/black Heart.png');
@@ -79,6 +79,7 @@ PlayState.preload = function() {
   this.game.load.image('grass:4x1', 'images/grass_4x1.png');
   this.game.load.image('grass:2x1', 'images/grass_2x1.png');
   this.game.load.image('grass:1x1', 'images/grass_1x1.png');
+  this.game.load.image('Zacken', 'images/Zacken.png');
   this.game.load.image('invisible-wall', 'images/invisible_wall.png');
   this.game.load.image('trampolin:1x1', 'images/trampolin_1x1.png');
   //spritesheet
@@ -188,6 +189,7 @@ PlayState._loadLevel = function(data) {
   this.bgDecoration = this.game.add.group();
   this.platforms = this.game.add.group();
   this.trampolin = this.game.add.group();
+  this.Zacken = this.game.add.group();
   this.coins = this.game.add.group();
   this.spider1 = this.game.add.group();
   this.spider2 = this.game.add.group();
@@ -214,6 +216,7 @@ PlayState._loadLevel = function(data) {
   }, this);
   data.coins.forEach(this._spawnCoin, this);
   data.trampolin.forEach(this._spawnTrampolin, this);
+  data.Zacken.forEach(this._spawnZacken, this);
   this.hasAllCoins = data.coins.length * 10;
   this._spawnDoor(data.door.x, data.door.y);
   this._spawnKey(data.key.x, data.key.y);
@@ -256,24 +259,31 @@ PlayState._handleCollisions = function() {
   this.game.physics.arcade.collide(this.hero, this.platforms);
   this.game.physics.arcade.overlap(this.hero, this.trampolin, this._onHeroVsTrampolin,
     null, this);
+  this.game.physics.arcade.overlap(this.hero, this.Zacken, this._onHeroVsZacken,
+    null, this);
   this.game.physics.arcade.overlap(this.hero, this.coins, this._onHeroVsCoin,
-    null, this);
-  this.game.physics.arcade.overlap(this.hero, this.spider1, this._onHeroVsSpider,
-    null, this);
-  this.game.physics.arcade.overlap(this.hero, this.spider2, this._onHeroVsSpider,
-    null, this);
-  this.game.physics.arcade.overlap(this.hero, this.spider3, this._onHeroVsSpider,
-    null, this);
-  this.game.physics.arcade.overlap(this.hero, this.spider4, this._onHeroVsSpider,
-    null, this);
-  this.game.physics.arcade.overlap(this.hero, this.spider5, this._onHeroVsSpider,
-    null, this);
-  this.game.physics.arcade.overlap(this.hero, this.spider6, this._onHeroVsSpider,
     null, this);
   this.game.physics.arcade.overlap(this.hero, this.key, this._onHeroVsKey,
     null, this);
   this.game.physics.arcade.overlap(this.hero, this.door, this._onHeroVsDoor,
     null, this);
+
+  var d = new Date();
+  var n = d.getTime();
+  if (n >= lastLifeLoss + 2000) {
+    this.game.physics.arcade.overlap(this.hero, this.spider1, this._onHeroVsSpider,
+      null, this);
+    this.game.physics.arcade.overlap(this.hero, this.spider2, this._onHeroVsSpider,
+      null, this);
+    this.game.physics.arcade.overlap(this.hero, this.spider3, this._onHeroVsSpider,
+      null, this);
+    this.game.physics.arcade.overlap(this.hero, this.spider4, this._onHeroVsSpider,
+      null, this);
+    this.game.physics.arcade.overlap(this.hero, this.spider5, this._onHeroVsSpider,
+      null, this);
+    this.game.physics.arcade.overlap(this.hero, this.spider6, this._onHeroVsSpider,
+      null, this);
+  }
 };
 
 
@@ -293,7 +303,6 @@ PlayState._onHeroVsSpider = function(hero, spider) {
   } else if (n > lastLifeLoss + 2000) {
     lastLifeLoss = n;
     hero.leben = hero.leben - 1;
-    console.log(hero.leben);
     if (hero.leben == 0) {
       this.red_HeartIcon0.destroy();
       hero.animations.play('invinsible');
@@ -319,6 +328,14 @@ PlayState._onHeroVsCoin = function(hero, coin) {
 PlayState._onHeroVsTrampolin = function(hero, trampolin) {
   hero.canAnimate = false;
   hero.jump(false);
+};
+
+PlayState._onHeroVsZacken = function(hero, Zacken) {
+  hero.canAnimate = false;
+  hero.jump(false);
+  this.game.state.restart(true, false, {
+    level: this.level
+  });
 };
 
 //OnHeroVsKey
@@ -455,13 +472,26 @@ PlayState._spawnTrampolin = function(trampolin) {
   sprite.body.immovable = true;
 };
 
+//spawnZacken
+PlayState._spawnZacken = function(Zacken) {
+  let sprite = this.Zacken.create(
+    Zacken.x, Zacken.y, Zacken.image);
+  this.game.physics.enable(sprite);
+  sprite.body.allowGravity = false;
+  sprite.body.immovable = true;
+};
+
+
 //Funktionen:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 //Hero
 function Hero(game, x, y, touchDownSound) {
+
   Phaser.Sprite.call(this, game, x, y, 'hero');
   this.anchor.set(0.5, 0.5);
   this.game.physics.enable(this);
+  this.game.physics.arcade.checkCollision.up = false;
+  this.game.physics.arcade.checkCollision.down = false;
   this.body.collideWorldBounds = true;
   this.touchDownSound = touchDownSound;
   this.kannDoppelSprung = false;
@@ -475,7 +505,6 @@ function Hero(game, x, y, touchDownSound) {
 Hero.prototype = Object.create(Phaser.Sprite.prototype);
 Hero.prototype.constructor = Hero;
 Hero.prototype.leben = 3;
-
 Hero.prototype.move = function(direction) {
   this.canAnimate = true;
   this.body.velocity.x = direction * SPEED;

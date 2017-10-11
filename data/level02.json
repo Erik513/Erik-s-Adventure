@@ -35,5 +35,6 @@
     "spider6": [],
     "door": {"x": 230, "y": 545},
     "key": {"x": 850, "y": 360},
+    "Zacken": [],
     "trampolin": [{"image": "trampolin:1x1","x": 495, "y": 525}]
 }
