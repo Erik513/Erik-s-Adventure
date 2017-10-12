@@ -8,6 +8,12 @@ const Spider3_SPEED = 350; //sehr schnell,rot-schwarz
 const Spider4_SPEED = 50; //Langsam,Blau
 const Spider5_SPEED = 80; //Riesig
 const Spider6_SPEED = 600; //winzig
+const Spider1_Leben = 1;
+const Spider2_Leben = 1;
+const Spider3_Leben = 1;
+const Spider4_Leben = 1;
+const Spider5_Leben = 1;
+const Spider6_Leben = 2;
 const JUMP_SPEED = 550; //Normaler Sprung
 const JUMP_SPEED2 = 400; //Doppelsprung
 const JUMP_SPEED_TRAMP = 700; //Abprall des Trampolins
@@ -23,7 +29,7 @@ window.onload = function() {
   let game = new Phaser.Game(960, 600, Phaser.AUTO, 'game');
   game.state.add('play', PlayState);
   game.state.start('play', true, false, {
-    level: 0 // ändern um bei lvl.. zu starten
+    level: 1 // ändern um bei lvl.. zu starten
   });
 };
 
@@ -43,6 +49,9 @@ PlayState.init = function(data) {
       this.sfx.jump.play();
     }
   }, this);
+  // if (this.game.state.restart) {
+  //  let GameOver.animations.play();
+  // }
   this.coinPickupCount = 0;
   this.hasKey = false;
   this.level = data.level;
@@ -69,10 +78,11 @@ PlayState.preload = function() {
   this.game.load.image('Leiter', 'images/Leiter.png');
   this.game.load.image('LeiterOben', 'images/LeiterOben.png');
   this.game.load.image('font:numbers', 'images/numbers.png');
+  this.game.load.image('ResetButton', 'images/ResetButton.png');
   this.game.load.image('font:LEVEL', 'images/LEVEL.png');
   this.game.load.image('icon:coin', 'images/coin_icon.png');
   this.game.load.image('background', 'images/background.png');
-  this.game.load.image('background2', 'images/Hintergrund2.png');
+  this.game.load.image('background2', 'images/Wald.png');
   this.game.load.image('ground', 'images/ground.png');
   this.game.load.image('grass:8x1', 'images/grass_8x1.png');
   this.game.load.image('grass:6x1', 'images/grass_6x1.png');
@@ -82,6 +92,8 @@ PlayState.preload = function() {
   this.game.load.image('Zacken', 'images/Zacken.png');
   this.game.load.image('invisible-wall', 'images/invisible_wall.png');
   this.game.load.image('trampolin:1x1', 'images/trampolin_1x1.png');
+  this.game.load.image('GameOver1', 'images/GameOver1.png');
+  this.game.load.image('GameOver2', 'images/GameOver2.png');
   //spritesheet
   this.game.load.spritesheet('decoration', 'images/decor.png', 42, 42);
   this.game.load.spritesheet('door', 'images/door.png', 42, 66);
@@ -109,6 +121,8 @@ PlayState.preload = function() {
 PlayState._createHud = function() {
   this.keyIcon = this.game.make.image(0, 19, 'icon:key');
   this.keyIcon.anchor.set(0, 0.5);
+  this.ResetButtonImg = this.game.make.image(430, 5, 'ResetButton');
+  this.ResetButtonImg.anchor.set(0, 0.5);
   this.coinFont = this.game.add.retroFont('font:numbers', 20, 26,
     NUMBERS_STR, 6);
   this.levelAnzeigeFont = this.game.add.retroFont('font:numbers', 20, 26,
@@ -127,6 +141,7 @@ PlayState._createHud = function() {
   this.hud.position.set(10, 10);
   this.hud.add(coinScoreImg);
   this.hud.add(levelNumberImg);
+  this.hud.add(this.ResetButtonImg);
   this.hud.add(this.keyIcon);
   this.hud.add(this.levelAnzeigeImg);
   this.black_HeartIcon0 = this.game.make.image(0, 60, 'black_Heart');
@@ -291,29 +306,35 @@ PlayState._handleCollisions = function() {
 var lastLifeLoss = 0;
 
 //OnHeroVsSpider
-PlayState._onHeroVsSpider = function(hero, spider) {
+PlayState._onHeroVsSpider = function(hero, spider, GameOver1, GameOver2) {
   this.sfx.stomp.play();
   //Zeit
   var d = new Date();
   var n = d.getTime();
   if (hero.body.velocity.y > 0) {
+    // this.spider_Leben = -1;
+    // if (this.spider_Leben == 0) {
     spider.die();
+    // }
     this.coinPickupCount = this.coinPickupCount + 20;
     hero.bounce();
   } else if (n > lastLifeLoss + 2000) {
     lastLifeLoss = n;
     hero.leben = hero.leben - 1;
-    if (hero.leben == 0) {
-      this.red_HeartIcon0.destroy();
-      hero.animations.play('invinsible');
-      this.game.state.restart(true, false, {
-        level: this.level
-      });
-    } else if (hero.leben == 2) {
-      this.red_HeartIcon2.destroy();
-    } else if (hero.leben == 1) {
-      this.red_HeartIcon1.destroy();
-    }
+  }
+  if (hero.leben == 0) {
+    this.red_HeartIcon0.destroy();
+    hero.animations.play('invinsible');
+    this.game.state.restart(true, false, {
+      level: this.level
+    });
+  } else if (hero.leben == 2) {
+    this.red_HeartIcon2.destroy();
+  } else if (hero.leben == 1) {
+    this.red_HeartIcon1.destroy();
+    // } else if (this.body.touching.down == false, this.game.physics.arcade.checkCollision.down == false)
+    //   this.game.state.restart(true, false, {
+    //     level: this.level
   }
 };
 
@@ -382,27 +403,27 @@ PlayState._goToNextLevel = function() {
 PlayState._spawnCharacters = function(data) {
   this.hero = new Hero(this.game, data.hero.x, data.hero.y, this.sfx.stomp);
   data.spider1.forEach(function(spider1) {
-    let sprite = new Spider(this.game, spider1.x, spider1.y, 'spider1', Spider1_SPEED);
+    let sprite = new Spider(this.game, spider1.x, spider1.y, 'spider1', Spider1_SPEED, Spider1_Leben);
     this.spider1.add(sprite);
   }, this);
   data.spider2.forEach(function(spider2) {
-    let sprite = new Spider(this.game, spider2.x, spider2.y, 'spider2', Spider2_SPEED);
+    let sprite = new Spider(this.game, spider2.x, spider2.y, 'spider2', Spider2_SPEED, Spider2_Leben);
     this.spider2.add(sprite);
   }, this);
   data.spider3.forEach(function(spider3) {
-    let sprite = new Spider(this.game, spider3.x, spider3.y, 'spider3', Spider3_SPEED);
+    let sprite = new Spider(this.game, spider3.x, spider3.y, 'spider3', Spider3_SPEED, Spider3_Leben);
     this.spider3.add(sprite);
   }, this);
   data.spider4.forEach(function(spider4) {
-    let sprite = new Spider(this.game, spider4.x, spider4.y, 'spider4', Spider4_SPEED);
+    let sprite = new Spider(this.game, spider4.x, spider4.y, 'spider4', Spider4_SPEED, Spider4_Leben);
     this.spider4.add(sprite);
   }, this);
   data.spider5.forEach(function(spider5) {
-    let sprite = new Spider(this.game, spider5.x, spider5.y, 'spider5', Spider5_SPEED);
+    let sprite = new Spider(this.game, spider5.x, spider5.y, 'spider5', Spider5_SPEED, Spider5_Leben);
     this.spider5.add(sprite);
   }, this);
   data.spider6.forEach(function(spider6) {
-    let sprite = new Spider(this.game, spider6.x, spider6.y, 'spider6', Spider6_SPEED);
+    let sprite = new Spider(this.game, spider6.x, spider6.y, 'spider6', Spider6_SPEED, Spider6_Leben);
     this.spider6.add(sprite);
   }, this);
   this.game.add.existing(this.hero);
@@ -480,6 +501,17 @@ PlayState._spawnZacken = function(Zacken) {
   sprite.body.allowGravity = false;
   sprite.body.immovable = true;
 };
+
+// PlayState._spawnResetButton = function(ResetButton) {
+//   $(ResetButton).ready("#button").click(function(ResetButton) {
+//     console.log(Hallo);
+//   });
+
+
+//  this.game.state.restart(true, false, {
+//    level: this.level
+// };
+//};
 
 
 //Funktionen:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -596,7 +628,6 @@ Spider.prototype = Object.create(Phaser.Sprite.prototype);
 Spider.prototype.constructor = Spider;
 Spider.prototype.die = function() {
   this.body.enable = false;
-
   this.animations.play('die').onComplete.addOnce(function() {
     this.kill();
   }, this);
@@ -610,3 +641,12 @@ Spider.prototype.update = function() {
     this.body.velocity.x = this.geschwindigkeit;
   }
 };
+
+// function GameOver(GameOver1, GameOver2) {
+//   Phaser.Sprite.call(this, game, x, y, 'GameOver1', 'GameOver2');
+//   this.anchor.set(0.5);
+//   GameOver.animations.add('gestorben', [0, 1, ], 8, true);
+//   GameOver.animations.play('gestorben').onComplete.addOnce(function() {
+//     this.kill();
+//   });
+// }
