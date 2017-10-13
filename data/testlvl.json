@@ -24,6 +24,7 @@
     "spider4": [],
     "spider5": [],
     "spider6": [],
+    "spider7": [],
     "door": {"x": 230, "y": 545},
     "key": {"x": 525, "y": 360},
     "Zacken": [{"image": "Zacken","x": 480, "y": 535}],

@@ -6,14 +6,16 @@ const Spider1_SPEED = 150; //Standartspinne
 const Spider2_SPEED = 275; //schnell,pink
 const Spider3_SPEED = 350; //sehr schnell,rot-schwarz
 const Spider4_SPEED = 50; //Langsam,Blau
-const Spider5_SPEED = 80; //Riesig
+const Spider5_SPEED = 40; //Riesig
 const Spider6_SPEED = 600; //winzig
+const Spider7_SPEED = 40; //Groß
 const Spider1_Leben = 1;
 const Spider2_Leben = 1;
 const Spider3_Leben = 1;
 const Spider4_Leben = 1;
 const Spider5_Leben = 1;
 const Spider6_Leben = 2;
+const Spider7_Leben = 1;
 const JUMP_SPEED = 550; //Normaler Sprung
 const JUMP_SPEED2 = 400; //Doppelsprung
 const JUMP_SPEED_TRAMP = 700; //Abprall des Trampolins
@@ -29,7 +31,7 @@ window.onload = function() {
   let game = new Phaser.Game(960, 600, Phaser.AUTO, 'game');
   game.state.add('play', PlayState);
   game.state.start('play', true, false, {
-    level: 1 // ändern um bei lvl.. zu starten
+    level: 0 // ändern um bei lvl.. zu starten
   });
 };
 
@@ -49,13 +51,10 @@ PlayState.init = function(data) {
       this.sfx.jump.play();
     }
   }, this);
-  // if (this.game.state.restart) {
-  //  let GameOver.animations.play();
-  // }
   this.coinPickupCount = 0;
   this.hasKey = false;
   this.level = data.level;
-  this.levelAll = 7; //Alle lvl müssen angegeben werden
+  this.levelAll = 8; //Alle lvl müssen angegeben werden
 };
 
 
@@ -64,13 +63,14 @@ PlayState.init = function(data) {
 
 PlayState.preload = function() {
   //json
-  this.game.load.json('level:0', 'data/testlvl.json');
+  this.game.load.json('level:0', 'data/level000.json');
   this.game.load.json('level:1', 'data/level00.json');
   this.game.load.json('level:2', 'data/level01.json');
   this.game.load.json('level:3', 'data/level02.json');
   this.game.load.json('level:4', 'data/level03.json');
   this.game.load.json('level:5', 'data/level04.json');
   this.game.load.json('level:6', 'data/level05.json');
+  this.game.load.json('level:7', 'data/testlvl.json');
   //image
   this.game.load.image('red_Heart', 'images/red Heart.png');
   this.game.load.image('black_Heart', 'images/black Heart.png');
@@ -79,10 +79,13 @@ PlayState.preload = function() {
   this.game.load.image('LeiterOben', 'images/LeiterOben.png');
   this.game.load.image('font:numbers', 'images/numbers.png');
   this.game.load.image('ResetButton', 'images/ResetButton.png');
+  this.game.load.image('Startbild', 'images/Startbild.png');
   this.game.load.image('font:LEVEL', 'images/LEVEL.png');
   this.game.load.image('icon:coin', 'images/coin_icon.png');
-  this.game.load.image('background', 'images/background.png');
-  this.game.load.image('background2', 'images/Wald.png');
+  this.game.load.image('background1', 'images/Hintergrund1.png');
+  this.game.load.image('background2', 'images/Hintergrund2.png');
+  this.game.load.image('background3', 'images/Hintergrund3.png');
+  this.game.load.image('background4', 'images/Hintergrund4.png');
   this.game.load.image('ground', 'images/ground.png');
   this.game.load.image('grass:8x1', 'images/grass_8x1.png');
   this.game.load.image('grass:6x1', 'images/grass_6x1.png');
@@ -92,8 +95,7 @@ PlayState.preload = function() {
   this.game.load.image('Zacken', 'images/Zacken.png');
   this.game.load.image('invisible-wall', 'images/invisible_wall.png');
   this.game.load.image('trampolin:1x1', 'images/trampolin_1x1.png');
-  this.game.load.image('GameOver1', 'images/GameOver1.png');
-  this.game.load.image('GameOver2', 'images/GameOver2.png');
+  this.game.load.image('GameOver', 'images/GameOver.png');
   //spritesheet
   this.game.load.spritesheet('decoration', 'images/decor.png', 42, 42);
   this.game.load.spritesheet('door', 'images/door.png', 42, 66);
@@ -105,6 +107,7 @@ PlayState.preload = function() {
   this.game.load.spritesheet('spider4', 'images/spider4.png', 42, 32);
   this.game.load.spritesheet('spider5', 'images/spider5.png', 168, 128);
   this.game.load.spritesheet('spider6', 'images/spider6.png', 21, 16);
+  this.game.load.spritesheet('spider7', 'images/spider7.png', 84, 64);
   this.game.load.spritesheet('icon:key', 'images/key_icon.png', 34, 30);
   //audio
   this.game.load.audio('sfx:coin', 'audio/coin.wav');
@@ -179,7 +182,10 @@ PlayState.create = function() {
     coin: this.game.add.audio('sfx:coin'),
     stomp: this.game.add.audio('sfx:stomp')
   };
-  this.game.add.image(0, 0, 'background');
+  this.game.add.image(0, 0, 'background1');
+  // this.game.add.image(0, 0, 'background2');
+  // this.game.add.image(0, 0, 'background3');
+  // this.game.add.image(0, 0, 'background4');
   this._loadLevel(this.game.cache.getJSON(`level:${this.level}`));
   this._createHud();
   this.levelAnzeigeFont.text = `${this.level+1}`;
@@ -212,6 +218,7 @@ PlayState._loadLevel = function(data) {
   this.spider4 = this.game.add.group();
   this.spider5 = this.game.add.group();
   this.spider6 = this.game.add.group();
+  this.spider7 = this.game.add.group();
   this.enemyWalls = this.game.add.group();
   this.enemyWalls.visible = false;
   data.platforms.forEach(this._spawnPlatform, this);
@@ -222,7 +229,8 @@ PlayState._loadLevel = function(data) {
     spider3: data.spider3,
     spider4: data.spider4,
     spider5: data.spider5,
-    spider6: data.spider6
+    spider6: data.spider6,
+    spider7: data.spider7
 
   });
   data.decoration.forEach(function(deco) {
@@ -271,6 +279,8 @@ PlayState._handleCollisions = function() {
   this.game.physics.arcade.collide(this.spider5, this.enemyWalls);
   this.game.physics.arcade.collide(this.spider6, this.platforms);
   this.game.physics.arcade.collide(this.spider6, this.enemyWalls);
+  this.game.physics.arcade.collide(this.spider7, this.platforms);
+  this.game.physics.arcade.collide(this.spider7, this.enemyWalls);
   this.game.physics.arcade.collide(this.hero, this.platforms);
   this.game.physics.arcade.overlap(this.hero, this.trampolin, this._onHeroVsTrampolin,
     null, this);
@@ -298,6 +308,8 @@ PlayState._handleCollisions = function() {
       null, this);
     this.game.physics.arcade.overlap(this.hero, this.spider6, this._onHeroVsSpider,
       null, this);
+    this.game.physics.arcade.overlap(this.hero, this.spider7, this._onHeroVsSpider,
+      null, this);
   }
 };
 
@@ -306,7 +318,7 @@ PlayState._handleCollisions = function() {
 var lastLifeLoss = 0;
 
 //OnHeroVsSpider
-PlayState._onHeroVsSpider = function(hero, spider, GameOver1, GameOver2) {
+PlayState._onHeroVsSpider = function(hero, spider, GameOver) {
   this.sfx.stomp.play();
   //Zeit
   var d = new Date();
@@ -425,6 +437,10 @@ PlayState._spawnCharacters = function(data) {
   data.spider6.forEach(function(spider6) {
     let sprite = new Spider(this.game, spider6.x, spider6.y, 'spider6', Spider6_SPEED, Spider6_Leben);
     this.spider6.add(sprite);
+  }, this);
+  data.spider7.forEach(function(spider7) {
+    let sprite = new Spider(this.game, spider7.x, spider7.y, 'spider7', Spider7_SPEED, Spider7_Leben);
+    this.spider7.add(sprite);
   }, this);
   this.game.add.existing(this.hero);
 };
@@ -551,7 +567,7 @@ Hero.prototype._getAnimationName = function() {
   let name = 'stop';
   var d = new Date();
   var n = d.getTime();
-  if (n < lastLifeLoss + 2000) {
+  if (n < lastLifeLoss + 1250) {
     name = 'invinsible';
   } else if (this.body.velocity.y < 0) {
     name = 'jump';
@@ -641,12 +657,3 @@ Spider.prototype.update = function() {
     this.body.velocity.x = this.geschwindigkeit;
   }
 };
-
-// function GameOver(GameOver1, GameOver2) {
-//   Phaser.Sprite.call(this, game, x, y, 'GameOver1', 'GameOver2');
-//   this.anchor.set(0.5);
-//   GameOver.animations.add('gestorben', [0, 1, ], 8, true);
-//   GameOver.animations.play('gestorben').onComplete.addOnce(function() {
-//     this.kill();
-//   });
-// }
